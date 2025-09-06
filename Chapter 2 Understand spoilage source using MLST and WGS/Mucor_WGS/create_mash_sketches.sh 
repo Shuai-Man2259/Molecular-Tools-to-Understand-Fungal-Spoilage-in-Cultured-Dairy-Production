@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Create a directory for Mash sketches
+mkdir -p mash_sketches
+
+# Loop through each subdirectory and create a sketch for the .fasta file
+for subdir in Mucor_assembly_output/*; do
+    # Check if it is a directory
+    if [ -d "$subdir" ]; then
+        # Find the .fasta file in the subdirectory
+        fasta_file=$(find "$subdir" -type f -name "*.fasta")
+        
+        # Extract the base name (without path and extension)
+        base_name=$(basename "$subdir")
+        
+        # Create a Mash sketch with a sketch size of 100,000
+        mash sketch -s 100000 -o mash_sketches/$base_name $fasta_file
+    fi
+done

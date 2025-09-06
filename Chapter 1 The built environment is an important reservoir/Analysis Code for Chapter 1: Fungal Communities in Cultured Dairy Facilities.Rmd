@@ -1,0 +1,677 @@
+# ---
+# title: "Chapter 1 Analysis R code"
+# author: "Shuai Man"
+# date: '2024-07-22'
+# description: "Analysis code for Chapter 1: Fungal Communities in Built Environment of Cultured Dairy Facilities"
+# ---
+
+#Download Packages if needed
+```{r}
+# Install packages from CRAN
+install.packages("scales")
+install.packages("ape")
+install.packages("ggplot2")
+install.packages("vegan")
+install.packages("tidyverse")
+install.packages("adespatial")
+install.packages("devtools")
+install.packages("grid")
+install.packages("gridExtra")
+install.packages("knitr")
+
+# Install BiocManager if not already installed
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+# Install packages from Bioconductor
+
+BiocManager::install("DECIPHER")
+BiocManager::install("DESeq2")
+BiocManager::install("phyloseq")
+
+# Install packages from GitHub
+devtools::install_github("jbisanz/qiime2R")
+devtools::install_github("microbiome/microbiome")
+devtools::install_github("microsud/microbiomeutilities")
+```
+
+# Load packages
+```{r}
+# Load packages
+library(scales)
+library(DECIPHER)
+library(ape)
+library(DESeq2)
+library(ggplot2)
+library(phyloseq)
+library(vegan)
+library(tidyverse)
+library(adespatial)
+library(devtools)
+library(qiime2R)
+library(microbiome)
+library(grid)
+library(gridExtra)
+library(knitr)
+library(microbiomeutilities)
+library(scales)
+```
+
+# Load Color
+```{r}
+nice_colors_swab = c("darkgrey",
+                       "yellow2", 
+                       "purple", 
+                       "darkgreen")  
+
+
+nice_colors_season = c("#3498DB", # Bright blue
+                       "#2ECC71", # Vibrant green
+                       "#F1C40F", # Sunny yellow
+                       "red")  # Vivid red
+
+nice_colors_production = c("deeppink4", 
+                           "darkolivegreen1",
+                           "#1ABC9C",  
+                           "hotpink3")  
+
+
+nice_colors <- c(
+  "k__Fungi__c___o___f___g__" = "grey",
+  "Acremonium" = "lightgoldenrod2",
+  "Akanthomyces" = "firebrick1",
+  "Alternaria" = "darkblue",
+  "Apiotrichum" = "hotpink3",
+  "Aspergillus" = "yellow",
+  "Aureobasidium" = "lightgrey",
+  "Avicennia" = "forestgreen",
+  "Betula" = "orangered2",
+  "Bisifusarium" = "springgreen2",
+  "Blidingia" = "peachpuff",
+  "Brassica" = "honeydew",
+  "Cadophora" = "royalblue2",
+  "Candida" = "red3",
+  "Cephaloascus" = "tan3",
+  "Chaetomiaceae_g__" = "lightcoral",
+  "Chaetomium" = "darkturquoise",
+  "Chaetothyriales_gen_Incertae_sedis" = "yellowgreen",
+  "Chordomyces" = "purple4",
+  "Cladosporium" = "darkgreen",
+  "Clavispora" = "cornsilk",
+  "Coelastrella" = "seashell2",
+  "Coniochaeta" = "chartreuse3",
+  "Cryptococcus" = "paleturquoise3",
+  "Curvibasidium" = "wheat",
+  "Cutaneotrichosporon" = "purple",
+  "Cyberlindnera" = "dodgerblue3",
+  "Cyphellophora" = "olivedrab1",
+  "Cystobasidium" = "slateblue1",
+  "Cystofilobasidium" = "tan",
+  "Debaryomyces" = "deeppink4",
+  "Dictyosporiaceae_gen_Incertae_sedis" = "deeppink4",
+  "Didymella" = "cyan3",
+  "Dioszegia" = "gold",
+  "Diutina" = "tomato",
+  "Effuseotrichosporon" = "gold1",
+  "Engyodontium" = "mistyrose",
+  "Enoplognatha" = "lemonchiffon3",
+  "Exophiala" = "gold3",
+  "Filobasidium" = "orangered",
+  "Fusarium" = "ivory",
+  "Fusicolla" = "red",
+  "Galactomyces" = "slategray2",
+  "Gastrostyla" = "violetred2",
+  "Geotrichum" = "firebrick",
+  "Humicola" = "mistyrose2",
+  "Iodophanus" = "wheat2",
+  "Issatchenkia" = "blue",
+  "Kluyveromyces" = "thistle1",
+  "Knufia" = "plum3",
+  "Kurtzmaniella" = "coral3",
+  "Leucosporidium" = "gold2",
+  "Linum" = "mintcream",
+  "Metazoa_gen_Incertae_sedis" = "rosybrown",
+  "Meyerozyma" = "paleturquoise1",
+  "Mrakia" = "violetred4",
+  "Mucor" = "dodgerblue1",
+  "Naganishia" = "orange",
+  "Nakazawaea" = "springgreen",
+  "Neosetophoma" = "mediumvioletred",
+  "Opercularia" = "grey99",
+  "Orbilia" = "grey67",
+  "Papiliotrema" = "lightyellow2",
+  "Paraphoma" = "slateblue2",
+  "Penicillium" = "limegreen",
+  "Pichia" = "seashell4",
+  "Piskurozyma" = "violet",
+  "Plectosphaerella" = "goldenrod2",
+  "Poa" = "hotpink3",
+  "Polygonum" = "purple4",
+  "Preussia" = "cornsilk2",
+  "Proceropycnis" = "slateblue2",
+  "Pseudallescheria" = "navy",
+  "Pseudogymnoascus" = "ivory3",
+  "Pseudopithomyces" = "sienna",
+  "Rhizopus" = "brown",
+  "Rhodosporidiobolus" = "khaki",
+  "Rhodotorula" = "goldenrod3",
+  "Rozellomycota_gen_Incertae_sedis" = "yellow4",
+  "Saccharomyces" = "darkolivegreen",
+  "Saccharomycetales_fam_Incertae_sedis_g__" = "tan2",
+  "Sarocladium" = "lavender",
+  "Scopulariopsis" = "mediumpurple2",
+  "Solanaceae_gen_Incertae_sedis" = "lightgoldenrod",
+  "Sporendocladia" = "lightpink4",
+  "Sporidiobolus" = "orange3",
+  "Stagonosporopsis" = "purple3",
+  "Stichococcus" = "darkolivegreen",
+  "Symmetrospora" = "plum2",
+  "Talaromyces" = "royalblue",
+  "Tausonia" = "lemonchiffon",
+  "Tetracladium" = "plum1",
+  "Torulaspora" = "skyblue3",
+  "Trichoderma" = "slategray3",
+  "Trichosporon" = "ivory2",
+  "Uwebraunia" = "grey60",
+  "Valsaceae_g__" = "grey50",
+  "Verrucaria" = "palegreen4",
+  "Vicia" = "lightseagreen",
+  "Vishniacozyma" = "black",
+  "Wallemia" = "white",
+  "Wickerhamiella" = "gold3",
+  "Wickerhamomyces" = "slateblue4",
+  "Yarrowia" = "violet"
+)
+
+```
+
+
+
+
+# Load Data
+```{r}
+#List files
+list.files()
+
+#Importing OTU/ASV table
+ASVS <- read_qza("q20/otu-table-dn-99-SFWS-q20.qza")   #Qiime output ASV file after filtering
+dim(ASVS$data)
+
+# Importing phylogenic tree
+tree <- read_qza("q20/rooted_tree.qza")  #Qiime output file
+tree$data
+
+# Importing taxonomy assignment 
+taxonomy <- read_qza("q20/unite-dyn-11-22-ITS-taxonomy-otu.qza")  #Qiime output file
+
+#Process taxonomy file more 
+#get taxonomy names
+tax_strings<- strsplit(as.character(taxonomy$data$Taxon), ";")
+head(tax_strings)
+
+#some strings are missing levels (blanks) and the dataframe will not bind
+x = 1
+y = 1
+
+blanks <- c("k__","p__", "c__", "o__","f__", "g__", "s__")
+
+num_taxa = length(tax_strings)  #number of taxa
+num_taxa  #shoudl match dim OTUs$data
+
+for (item in tax_strings){
+  
+  t = length(tax_strings[[x]]) #get list item length
+  
+if (t < 7)  {  #if less than 7 elements in each list item
+  #print(t)
+  y=1
+  #print(taxa)
+  while (y <= 7){  #loop through each item in item 
+    if (is.na(tax_strings[[x]][y])){
+      print('needs')
+      tax_strings[[x]][y] = blanks[y]  #replace blank space with corr level character
+      y=y+1
+      }
+      else(y=y+1)
+    }
+x = x+1
+}
+  else (x = x+ 1)
+}
+
+#convert to dataframe
+tax_table<-as.data.frame(tax_strings)
+dim(tax_table)
+#Trasnpose table
+tax_table<-t(tax_table)
+head(tax_table)
+
+#Add level labels
+#Add oto/asv info to tax table
+rownames(tax_table) <- taxonomy$data$Feature.ID
+colnames(tax_table) <- c("Kingdom","Phylum","Class","Order","Family","Genus","Species")
+head(tax_table)
+#Inspect table 
+write.csv(tax_table, "merged_tax_table.csv")
+
+#################Creating phyloseq Swab.Site#######################################
+
+#Note, phyloseq uses the term "OTU" loosely and since we fed it an ASV table, it is an ASV table
+OTU = otu_table(as.matrix(ASVS$data), taxa_are_rows = T)
+#Transpose OtU table
+otu_table(OTU)<-t(otu_table(OTU))  #may need to do this again
+
+TAX = tax_table(as.matrix(tax_table))
+dim(TAX)
+dim(taxa_names(OTU))
+head(TAX)
+
+# Importing metadata
+metadata <- read.table("q20/Metadata_ITS_SFWS2.txt", sep='\t', header=T, row.names=1, comment="")
+head(metadata)
+dim(metadata)
+length(sample_names(OTU))
+SAMPLE = sample_data(metadata)
+
+#phylogentic tree
+TREE = tree$data
+
+#Inspect files for troubleshooting 
+
+write.csv(SAMPLE, "phyloseq SAMPLE input.csv")
+write.csv(TAX, "phyloseq TAX input.csv")
+write.csv(OTU, "phyloseq OTU input.csv")
+
+# merge the data
+ps <- phyloseq(OTU, TAX, SAMPLE,TREE)
+#contains OTU table, taxonomy table, sample data, and phy tree
+#check that dimensions are consistent (same number taxa between OTU, tax_table)
+ps
+#######################Summary stats from phyloseq Swab.Site########################
+#Summarizing the phyloseq Swab.Site to check for feature of data
+# check for features of data  
+summarize_phyloseq(ps)
+print_ps(ps)
+summary(sample_sums(ps))
+```
+
+
+```{r}
+# Creating a table for number of features for each phyla
+table(tax_table(ps)[, "Genus"], exclude = NULL)
+
+# Removing the NAs and uncharacterized Phylums
+ps0 <- subset_taxa(ps, !is.na(Genus) & !Genus %in% c("", "g__"))#Remove unidentified genera
+
+# Summary Before and After
+ps
+ps0
+
+# Compute prevalence of each feature, store as data.frame
+prevdf = apply(X = otu_table(ps0),
+               MARGIN = ifelse(taxa_are_rows(ps0), yes = 1, no = 2),
+               FUN = function(x){sum(x > 0)})
+
+# Add taxonomy and total read counts to this data.frame
+prevdf = data.frame(Prevalence = prevdf,
+                    TotalAbundance = taxa_sums(ps0),
+                    tax_table(ps0))
+# Viewing
+head(prevdf)
+# Computing average and total prevalence
+temp_df <- plyr::ddply(prevdf, "Genus", function(df1){cbind(mean(df1$Prevalence),sum(df1$Prevalence))})
+
+newdata<- temp_df
+colnames(newdata) <- c("Genus", "mean","sum_total")
+head(newdata)
+
+newdata<- newdata%>% arrange(desc(sum_total))
+head(newdata)
+
+# Vector to be removed
+filterGenus <- temp_df[temp_df$`2` < 10,]$Genus  #Can change this number should be at least greater than 2
+
+# Filter entries with unidentified Phylum.
+ps1 = subset_taxa(ps0, !Genus %in% filterGenus)
+
+# Summary
+ps
+ps0
+ps1
+
+# Subset to the remaining phyla
+prevdf1 = subset(prevdf, Genus %in% get_taxa_unique(ps1, "Genus"))
+
+#  Define prevalence threshold as 5% of total samples
+prevalenceThreshold = 0.05 * nsamples(ps0)
+prevalenceThreshold
+
+# Execute prevalence filter, using `prune_taxa()` function
+keepTaxa = rownames(prevdf1)[(prevdf1$Prevalence >= prevalenceThreshold)]
+ps2 = prune_taxa(keepTaxa, ps0)
+ps2
+```
+
+
+#Filter samples
+```{r}
+#GEt samples to keep for LOW ASV
+ps_be<- subset_samples(ps2, Swab.Site %in% c("Fan/Vent", "Wall/Ceiling", "Floor", "Door"))
+ps_be
+
+```
+
+#Beta Diversity
+```{r}
+####################################################################################
+#FUNCTION 
+beta_diversity_phylogenic <- function(ps_object, meth, color_var){
+  physeq.ord.bray <- ordinate(ps_object, "PCoA", "bray", weighted=F)
+  b.div.bray <- plot_ordination(ps_object, physeq.ord.bray, type= "samples", color= color_var) + geom_point(size=18)
+  b.div.bray <- b.div.bray + stat_ellipse(linewidth = 2) + # ggtitle("Bray") + 
+    theme_classic() + 
+    scale_color_manual(values = nice_colors_season) + guides(color = FALSE) + 
+    theme(text = element_text(size=58,colour="black",face="bold"),
+          strip.background = element_blank(), 
+          axis.text.x.bottom = element_text(size = 48),
+          axis.text.y = element_text(size = 48),
+          axis.title = element_text(size = 50, face = "bold"))
+  print(b.div.bray)
+  #Export plot to .tif file 
+  tiff(paste(meth, color_var,"Bray Beta Diversity.tif", sep=" "), res=300, compression = "lzw", height=9, width=15, units="in")
+  print(b.div.bray)
+  dev.off()
+
+}
+
+####################################################################################
+#Call Function 
+#Filter ps_be samples to get rid of zero rows
+#keep_samples <- apply(otu_table(ps_be), 1, function(x) paste(names(otu_table(ps_be))[x == 0], collapse = "-"))
+#d<- as.data.frame(keep_samples)
+#head(d)
+
+#Get ride of Zero Rows or Beta Diversity will not work.  
+ps_be <- subset_samples(ps_be, !samples %in% c("sample-11", "sample-110", "sample-133", "sample-135", "sample-137", "sample-138", "sample-346" ,"sample-347", "sample-353", "sample-247", "sample-331","sample-332"))
+
+
+###########################################################
+beta_diversity_phylogenic(ps_be, "Built Environment", "Season")
+beta_diversity_phylogenic(ps_be, "Built Environment", "Production.Area")
+beta_diversity_phylogenic(ps_be, "Built Environment", "Swab.Site")
+
+```
+
+#Tornado Plot
+```{r}
+List_taxa <- function(ps_object, name) {
+  grp_abund <- get_group_abundances(ps_object,
+                                    level = "Genus",
+                                    group = NULL,
+                                    transform = "compositional")
+
+  grp_abund$OTUID <- gsub("p__", "", grp_abund$OTUID)
+  grp_abund$OTUID <- ifelse(grp_abund$OTUID == "",
+                            "Unclassified", grp_abund$OTUID)
+
+  write.csv(grp_abund, paste(name, "Mean Abundance Genus OTU.csv", sep = " "))
+
+  # Sort grp_abund by mean abundance
+  newdata <- grp_abund[order(grp_abund$mean_abundance, decreasing = TRUE), ]
+  selected_rows <- rbind(newdata[1:10, ])
+  # Write the selected rows to a CSV file
+  write.csv(selected_rows, paste(name, "BT Top Ten Genus.csv", sep = " "), row.names = FALSE)
+
+  # Create a data frame with the selected rows
+  ten_df <- as.data.frame(selected_rows)
+
+  # Clean genus names
+  for (i in 1:dim(ten_df)[1]) {
+    if (substr(ten_df[i, 1], 1, 1) == "k") {
+      ten_df[i, 1] <- sapply(str_split(ten_df[i, 1], "f__"), '[', 2) # Split at order
+    } else {
+      ten_df[i, 1] <- sapply(str_split(ten_df[i, 1], "g__"), '[', 2) # Remove g from genus
+    }
+  }
+
+  ten_df$mean_abundance <- 100 * ten_df$mean_abundance
+  print(ten_df)
+
+  library(ggplot2)
+
+  # Create the plot
+  bar <- ggplot(ten_df, aes(x = reorder(OTUID, -mean_abundance), y = mean_abundance)) + 
+    geom_bar(stat = "identity", color = "grey", fill = "grey") +
+    theme(
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(),
+      panel.background = element_blank(), 
+      axis.line = element_line(colour = "black"),
+      text = element_text(size = 60, colour = "black", face = "italic"),
+      axis.text.x = element_text(angle = 0, hjust = 1, colour = 'black', margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")),
+      axis.text.y = element_text(angle = 0, hjust = 1, colour = 'black', margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")),
+      axis.ticks.length = unit(-0.25, "cm"),
+      plot.title = element_text(hjust = 0.9),
+      legend.text = element_text(size = 48 ),  # Italicize legend text
+      legend.title = element_text(size = 40)  # Increase legend title size
+    ) +
+    scale_x_discrete(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0), limits = c(0, 25), breaks = c(0, 5, 10, 15, 20,25)) + 
+    ylab(expression(bold("Relative Abundance (%)"))) + 
+    xlab(expression(bold("Genera"))) +
+    theme(axis.ticks.x = element_blank()) +  
+    coord_flip()
+
+  # Print the plot
+   print(bar)
+  
+  # Export plot to .tif file 
+  tiff(paste(name, "BT Mean Compositional Abundance Genus single bar OTU.tif", sep=" "), res=300, compression = "lzw", height=9, width=20, units="in")
+  print(bar)
+  dev.off()
+}
+
+
+
+####################################################################################
+#CALL FUNCTION
+
+List_taxa(ps_be_BT, "Raw_OTU_Tornado")
+
+```
+
+
+#Stacked barplot
+#Remove the legend and keep intext label
+```{r}
+
+#Function to make stacked barplot of genus
+#Results will output in your directory 
+
+stack_genus <- function(ps_object, group, density){
+  
+
+#Get relative abundance at Genus level for a "group"
+grp_abund <- get_group_abundances(ps_object, 
+                                  level = "Genus", 
+                                  group= group,   #Change this variable "Object", "Room"
+                                  transform = "compositional")
+
+#Cleaning up strings
+grp_abund$OTUID <- gsub("p__", "",grp_abund$OTUID)
+grp_abund$OTUID <- ifelse(grp_abund$OTUID == "", 
+                          "Unclassified", grp_abund$OTUID)
+#filter out unidentified genus
+abund_df = grp_abund
+dim(abund_df)
+
+#sort abund_df by mean
+abund_df = as.data.frame(abund_df)
+#Order from highest to lowest mean_abundance
+newdata <- abund_df[order(abund_df$mean_abundance, decreasing = TRUE),]
+
+#Find row number when mean_abudance is less than <0.1
+j=1
+row_num = 0
+while (row_num==0){
+#If mean abuandance falls below 1% than get row number
+if (newdata$mean_abundance[j] < 0.01) {row_num = j}
+print(row_num)
+j=j+1
+}
+
+row_num
+
+
+
+#Create data frame of top organisms 
+top_df <- as.data.frame(newdata[1:row_num,])  # input data
+
+write.csv(top_df,paste(density, group, "OTU Top Genus above 5% percent .csv", sep = " "))
+
+#clean strings in top_df
+i=1
+while (i <= dim(top_df)[1]){  
+#If string starts with "k"
+if (substr(top_df[i,"OTUID"],1,1)=="k") {
+  top_df[i,2] =sapply(str_split(top_df[i,"OTUID"],"f__",),'[',2)  #then split at order 
+}
+else  
+top_df[i,2]=sapply(str_split(top_df[i,"OTUID"],"g__",),'[',2)  #else Remove "g" from genus 
+i=i+1
+}
+
+#View data fram
+head(top_df)
+
+# Create stacked barplot
+bar <- ggplot(top_df, aes(fill = OTUID, y = mean_abundance, x = top_df[, group])) + 
+  geom_bar(position = "fill", stat = "identity") +
+  geom_text(label = top_df$OTUID, position = position_fill(vjust = 0.5), size = 8) +  # Add label to each bar
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), # Remove background
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(text = element_text(size = 20, colour = "black", face = "bold"), 
+        axis.text.x = element_text(angle = 45, hjust = 1, colour = 'black', margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")),
+        axis.text.y = element_text(angle = 0, hjust = 1, colour = 'black', margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")),
+        axis.ticks.length = unit(-0.25, "cm"), #-0.25 (inside)
+        plot.title = element_text(hjust = 0.9),
+        legend.position = "none") +  # Remove legend
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) + # Force axis to start at 0 
+  ylab(expression(bold("Mean Abundance"))) + # Change y label
+  xlab(((group))) +
+  theme(axis.ticks.x = element_blank()) +  # Remove x axis tick marks
+  scale_fill_manual(values = nice_colors) + # Change colors to be more distinguished ("nice_colors")
+  coord_flip()  # Rotate plot
+
+# Print the plot
+print(bar)
+
+
+#Export plot to .tif file 
+tiff(paste(density, group, "OTU Mean Compositional Abundance Stacked Bar Chart above 5 percent.tif", sep=" "), res=300, compression = "lzw", height=9, width=15, units="in")
+print(bar)
+dev.off()
+
+
+
+}
+################################################################################
+################################################################################
+#Run Function
+#ps_object = Phyloseq object 
+#group = Grouping category-Any category in the metadata file (string)
+#density = "High, Medium, Low" (string)-merely used to label file names
+
+#Only includes organisms above 0.05 (5%) relative abundance 
+
+stack_genus(ps_be, "Season","ALL")
+
+stack_genus(ps_be, "Swab.site", "All")
+
+
+```
+
+
+#keep the legend but remove intext label
+```{r}
+stack_genus <- function(ps_object, group, density){
+  
+  #Get relative abundance at Genus level for a "group"
+  grp_abund <- get_group_abundances(ps_object, 
+                                    level = "Genus", 
+                                    group= group,   #Change this variable "Object", "Room"
+                                    transform = "compositional")
+  #Cleaning up strings
+  grp_abund$OTUID <- gsub("p__", "",grp_abund$OTUID)
+  grp_abund$OTUID <- ifelse(grp_abund$OTUID == "", 
+                            "Unclassified", grp_abund$OTUID)
+  #filter out unidentified genus
+  abund_df = grp_abund
+  dim(abund_df)
+  #sort abund_df by mean
+  abund_df = as.data.frame(abund_df)
+  #Order from highest to lowest mean_abundance
+  newdata <- abund_df[order(abund_df$mean_abundance, decreasing = TRUE),]
+  #Find row number when mean_abudance is less than <0.1
+  j=1
+  row_num = 0
+  while (row_num==0){
+    #If mean abuandance falls below 1% than get row number
+    if (newdata$mean_abundance[j] < 0.01) {row_num = j}
+    print(row_num)
+    j=j+1
+  }
+  row_num
+  #Create data frame of top organisms 
+  top_df <- as.data.frame(newdata[1:row_num,])  # input data
+  write.csv(top_df,paste(density, group, "OTU Top Genus above 1 percent .csv", sep = " "))
+  #clean strings in top_df
+  i=1
+  while (i <= dim(top_df)[1]){  
+    #If string starts with "k"
+    if (substr(top_df[i,"OTUID"],1,1)=="k") {
+      top_df[i,2] =sapply(str_split(top_df[i,"OTUID"],"f__",),'[',2)  #then split at order 
+    }
+    else  
+      top_df[i,2]=sapply(str_split(top_df[i,"OTUID"],"g__",),'[',2)  #else Remove "g" from genus 
+    i=i+1
+  }
+  #View data fram
+  head(top_df)
+  # Create stacked barplot
+bar <- ggplot(top_df, aes(fill = OTUID, y = mean_abundance, x = top_df[, group])) + 
+  geom_bar(position = "fill", stat = "identity") +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    panel.background = element_blank(), 
+    axis.line = element_line(colour = "black"),
+    text = element_text(size = 28, colour = "black", face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1, colour = 'black', margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")),
+    axis.text.y = element_text(angle = 0, hjust = 1, colour = 'black', margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")),
+    axis.ticks.length = unit(-0.25, "cm"), 
+    plot.title = element_text(hjust = 0.9),
+    legend.position = "right",
+    legend.text = element_text(size = 32, face = "italic"),  # Italicize legend text
+    legend.title = element_text(size = 32)  # Increase legend title size
+  ) +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) + 
+  ylab(expression(bold("Mean Abundance"))) + 
+  xlab(((group))) +
+  theme(axis.ticks.x = element_blank()) +  
+  scale_fill_manual(values = nice_colors, name = "Genera") + 
+  coord_flip()
+
+  # Print the plot
+  print(bar)
+  #Export plot to .tif file 
+  tiff(paste(density, group, "WS OTU Mean Compositional Abundance Stacked Bar Chart above 1 percent.tif", sep=" "), res=500, compression = "lzw", height=10, width=20, units="in")
+  print(bar)
+  dev.off()
+}
+
+ps_WS_floor
+stack_genus(ps_WS_floor, "Location.Sample.Date","WS.Floor")
+```
